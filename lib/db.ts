@@ -27,8 +27,7 @@ function ensureDataFiles() {
     }
 
     if (!fs.existsSync(USERS_FILE)) {
-      // Default admin user will be created by running: node scripts/setup.js
-      // For now, create an empty users file - the setup script will populate it
+      // Create empty users file - default admin will be created on first access
       fs.writeFileSync(USERS_FILE, JSON.stringify([], null, 2), "utf-8");
     }
   } catch (error) {
@@ -134,7 +133,27 @@ export function getUsers(): User[] {
   try {
     ensureDataFiles();
     const data = fs.readFileSync(USERS_FILE, "utf-8");
-    return JSON.parse(data);
+    const users = JSON.parse(data);
+    
+    // If no users exist, create default admin user (for first-time deployment)
+    if (users.length === 0) {
+      const defaultPasswordHash = "$2a$10$3hfy6d3Xi/7JCRzGbR.FiuPkUl6VbTGZzunHoPhqHRHg/2RPT9B32"; // hash of "admin123"
+      const defaultUser: User = {
+        id: "1",
+        email: "admin@galactis.ai",
+        password: defaultPasswordHash,
+        name: "Admin",
+      };
+      users.push(defaultUser);
+      try {
+        fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), "utf-8");
+      } catch (writeError) {
+        console.error("Error writing default user:", writeError);
+      }
+      return users;
+    }
+    
+    return users;
   } catch (error) {
     console.error("Error reading users:", error);
     return [];
