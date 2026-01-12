@@ -88,7 +88,8 @@ export default function EditPostPage() {
         finalPublishedDate = new Date(formData.publishedDate).toISOString();
       }
 
-      // If scheduling, force published to false
+      // If scheduling, force published to false (will auto-publish at scheduled time)
+      const shouldPublish = formData.schedulePublish ? false : formData.published;
       const shouldPublish = formData.schedulePublish ? false : formData.published;
 
       const response = await fetch(`/api/posts/${id}`, {
