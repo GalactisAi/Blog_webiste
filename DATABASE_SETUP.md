@@ -133,3 +133,5 @@ Supabase free tier includes:
 - [Supabase Discord](https://discord.supabase.com)
 - Check Vercel deployment logs for errors
 
+
+

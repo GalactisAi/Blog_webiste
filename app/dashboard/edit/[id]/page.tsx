@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
+import ImageUpload from "@/components/ImageUpload";
 
 export default function EditPostPage() {
   const router = useRouter();
@@ -17,6 +18,7 @@ export default function EditPostPage() {
     content: "",
     publishedDate: "",
     published: false,
+    coverImage: "",
   });
 
   useEffect(() => {
@@ -49,6 +51,7 @@ export default function EditPostPage() {
           content: post.content || "",
           publishedDate: post.publishedDate ? post.publishedDate.split("T")[0] : new Date().toISOString().split("T")[0],
           published: post.published || false,
+          coverImage: post.coverImage || "",
         });
       } else {
         router.push("/dashboard");
@@ -69,7 +72,10 @@ export default function EditPostPage() {
       const response = await fetch(`/api/posts/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          coverImage: formData.coverImage || undefined,
+        }),
       });
 
       if (response.ok) {
@@ -155,6 +161,19 @@ export default function EditPostPage() {
               value={formData.excerpt}
               onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Cover Image
+            </label>
+            <ImageUpload
+              currentImage={formData.coverImage}
+              onImageChange={(url) => setFormData({ ...formData, coverImage: url })}
+            />
+            <p className="mt-1 text-sm text-gray-500">
+              Optional: Add a cover image for your blog post
+            </p>
           </div>
 
           <div>

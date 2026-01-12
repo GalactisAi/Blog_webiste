@@ -36,7 +36,7 @@ export async function PUT(
   const { id } = await params;
   try {
     const data = await request.json();
-    const { title, slug, excerpt, content, publishedDate, published } = data;
+    const { title, slug, excerpt, content, publishedDate, published, coverImage } = data;
 
     const updated = await updatePost(id, {
       title,
@@ -45,6 +45,7 @@ export async function PUT(
       content,
       publishedDate: new Date(publishedDate).toISOString(),
       published,
+      coverImage: coverImage || undefined,
     });
 
     if (!updated) {

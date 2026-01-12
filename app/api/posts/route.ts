@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const data = await request.json();
-    const { title, slug, excerpt, content, publishedDate, published } = data;
+    const { title, slug, excerpt, content, publishedDate, published, coverImage } = data;
 
     if (!title || !slug || !excerpt || !content || !publishedDate) {
       return NextResponse.json(
@@ -62,6 +62,7 @@ export async function POST(request: NextRequest) {
       content,
       publishedDate: new Date(publishedDate).toISOString(),
       published: published || false,
+      coverImage: coverImage || undefined,
     });
 
     return NextResponse.json(post, { status: 201 });

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import ImageUpload from "@/components/ImageUpload";
 
 export default function NewPostPage() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function NewPostPage() {
     content: "",
     publishedDate: new Date().toISOString().split("T")[0],
     published: false,
+    coverImage: "",
   });
 
   useEffect(() => {
@@ -57,7 +59,10 @@ export default function NewPostPage() {
       const response = await fetch("/api/posts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          coverImage: formData.coverImage || undefined,
+        }),
       });
 
       if (response.ok) {
@@ -143,6 +148,19 @@ export default function NewPostPage() {
               onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
             />
             <p className="mt-1 text-sm text-gray-500">Short description for the blog listing</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Cover Image
+            </label>
+            <ImageUpload
+              currentImage={formData.coverImage}
+              onImageChange={(url) => setFormData({ ...formData, coverImage: url })}
+            />
+            <p className="mt-1 text-sm text-gray-500">
+              Optional: Add a cover image for your blog post
+            </p>
           </div>
 
           <div>
