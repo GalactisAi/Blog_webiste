@@ -44,6 +44,29 @@ export default function PostPreview({ postId, onClose }: PostPreviewProps) {
   const markdownToHtml = (markdown: string): string => {
     let html = markdown;
     
+    // Images first (before other processing to avoid conflicts)
+    // Handle markdown image syntax: ![alt](url)
+    html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, url) => {
+      // Clean up the URL (remove any extra spaces or characters)
+      const cleanUrl = url.trim();
+      return `<div class="my-6"><img src="${cleanUrl}" alt="${alt || 'Image'}" class="max-w-full h-auto rounded-lg shadow-md mx-auto" style="max-height: 500px; object-fit: contain;" /></div>`;
+    });
+    
+    // Also handle plain image URLs (data URLs or http/https URLs that might be in content)
+    // This handles cases where images are pasted directly
+    html = html.replace(/(^|\s)(data:image\/[^;]+;base64,[^\s\)]+)/g, (match, prefix, dataUrl) => {
+      return `${prefix}<div class="my-6"><img src="${dataUrl.trim()}" alt="Uploaded image" class="max-w-full h-auto rounded-lg shadow-md mx-auto" style="max-height: 500px; object-fit: contain;" /></div>`;
+    });
+    
+    // Handle http/https image URLs that are standalone
+    html = html.replace(/(^|\s)(https?:\/\/[^\s\)]+\.(jpg|jpeg|png|gif|webp|svg)(\?[^\s\)]*)?)/gi, (match, prefix, url) => {
+      // Only replace if it's not already inside an img tag or markdown
+      if (!match.includes('![') && !match.includes('<img')) {
+        return `${prefix}<div class="my-6"><img src="${url.trim()}" alt="Image" class="max-w-full h-auto rounded-lg shadow-md mx-auto" style="max-height: 500px; object-fit: contain;" /></div>`;
+      }
+      return match;
+    });
+    
     // Headers
     html = html.replace(/^### (.*$)/gim, '<h3 class="text-xl font-semibold mt-6 mb-3">$1</h3>');
     html = html.replace(/^## (.*$)/gim, '<h2 class="text-2xl font-bold mt-8 mb-4">$1</h2>');
@@ -55,20 +78,28 @@ export default function PostPreview({ postId, onClose }: PostPreviewProps) {
     // Italic
     html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
     
-    // Links
-    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">$1</a>');
+    // Links (but not image links which are already processed)
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, text, url) => {
+      // Skip if this looks like it was part of an image (already processed)
+      if (html.includes(`<img src="${url}"`)) {
+        return match;
+      }
+      return `<a href="${url}" class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">${text}</a>`;
+    });
     
-    // Images
-    html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="max-w-full h-auto rounded-lg my-4" />');
-    
-    // Line breaks
-    html = html.replace(/\n\n/g, '</p><p class="mb-4">');
-    html = html.replace(/\n/g, '<br />');
-    
-    // Wrap in paragraph if not already wrapped
-    if (!html.startsWith('<')) {
-      html = '<p class="mb-4">' + html + '</p>';
-    }
+    // Line breaks - split by double newlines for paragraphs
+    const paragraphs = html.split(/\n\n+/);
+    html = paragraphs.map(p => {
+      p = p.trim();
+      if (!p) return '';
+      // Don't wrap if already an HTML tag
+      if (p.startsWith('<')) {
+        return p;
+      }
+      // Replace single newlines with <br>
+      p = p.replace(/\n/g, '<br />');
+      return `<p class="mb-4 leading-relaxed">${p}</p>`;
+    }).join('');
     
     return html;
   };
