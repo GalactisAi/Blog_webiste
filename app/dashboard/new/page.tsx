@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import ImageUpload from "@/components/ImageUpload";
+import ContentImageInsert from "@/components/ContentImageInsert";
 
 export default function NewPostPage() {
   const router = useRouter();
@@ -19,6 +20,7 @@ export default function NewPostPage() {
     coverImage: "",
     schedulePublish: false,
   });
+  const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     checkAuth();
@@ -68,12 +70,16 @@ export default function NewPostPage() {
         finalPublishedDate = new Date(formData.publishedDate).toISOString();
       }
 
+      // If scheduling, force published to false
+      const shouldPublish = formData.schedulePublish ? false : formData.published;
+
       const response = await fetch("/api/posts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
           publishedDate: finalPublishedDate,
+          published: shouldPublish,
           coverImage: formData.coverImage || undefined,
         }),
       });
@@ -177,10 +183,35 @@ export default function NewPostPage() {
           </div>
 
           <div>
-            <label htmlFor="content" className="block text-sm font-medium text-gray-700">
-              Content * (Markdown supported)
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label htmlFor="content" className="block text-sm font-medium text-gray-700">
+                Content * (Markdown supported)
+              </label>
+              <ContentImageInsert
+                onInsert={(markdown) => {
+                  const textarea = contentTextareaRef.current;
+                  if (textarea) {
+                    const start = textarea.selectionStart;
+                    const end = textarea.selectionEnd;
+                    const text = formData.content;
+                    const before = text.substring(0, start);
+                    const after = text.substring(end);
+                    const newContent = before + markdown + "\n\n" + after;
+                    setFormData({ ...formData, content: newContent });
+                    // Set cursor position after inserted markdown
+                    setTimeout(() => {
+                      textarea.focus();
+                      const newPosition = start + markdown.length + 2;
+                      textarea.setSelectionRange(newPosition, newPosition);
+                    }, 0);
+                  } else {
+                    setFormData({ ...formData, content: formData.content + "\n\n" + markdown });
+                  }
+                }}
+              />
+            </div>
             <textarea
+              ref={contentTextareaRef}
               id="content"
               required
               rows={20}
@@ -188,6 +219,9 @@ export default function NewPostPage() {
               value={formData.content}
               onChange={(e) => setFormData({ ...formData, content: e.target.value })}
             />
+            <p className="mt-1 text-xs text-gray-500">
+              Use the "Insert Image" button to add images to your content, or write Markdown: ![alt text](image-url)
+            </p>
           </div>
 
           <div>
