@@ -156,7 +156,10 @@ export async function createPost(
     }
   }
 
-  // Fallback to in-memory storage (works on serverless)
+  // Fallback to in-memory storage (works on serverless but NOT PERSISTENT)
+  console.warn("⚠️ WARNING: Database not configured. Posts are stored in memory and will be lost on server restart/deployment!");
+  console.warn("⚠️ To persist posts, set up Supabase and add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.");
+  
   const posts = await getPosts();
   const newPost: BlogPost = {
     ...post,

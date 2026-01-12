@@ -22,6 +22,7 @@ export default function DashboardPage() {
   const [showApiDetails, setShowApiDetails] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [previewPostId, setPreviewPostId] = useState<string | null>(null);
+  const [storageWarning, setStorageWarning] = useState(false);
 
   useEffect(() => {
     checkAuth();
