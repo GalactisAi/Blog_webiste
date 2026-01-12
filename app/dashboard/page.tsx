@@ -18,6 +18,8 @@ export default function DashboardPage() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
+  const [showApiDetails, setShowApiDetails] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
 
   useEffect(() => {
     checkAuth();
@@ -81,6 +83,31 @@ export default function DashboardPage() {
     }
   };
 
+  const getBaseUrl = () => {
+    if (typeof window !== "undefined") {
+      return window.location.origin;
+    }
+    return "http://localhost:3001";
+  };
+
+  const copyToClipboard = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(label);
+      setTimeout(() => setCopied(null), 2000);
+    } catch (error) {
+      console.error("Failed to copy:", error);
+      alert("Failed to copy to clipboard");
+    }
+  };
+
+  const apiBaseUrl = getBaseUrl();
+  const apiFeedUrl = `${apiBaseUrl}/api/feed`;
+  const envExample = `BLOGGER_API_URL=${apiFeedUrl}`;
+  const fetchExample = `fetch('${apiFeedUrl}')
+  .then(response => response.json())
+  .then(data => console.log(data));`;
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -102,6 +129,12 @@ export default function DashboardPage() {
               <h1 className="text-xl font-bold text-gray-900">Blogger CMS</h1>
             </div>
             <div className="flex items-center gap-4">
+              <button
+                onClick={() => setShowApiDetails(!showApiDetails)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                {showApiDetails ? "Hide" : "Show"} API Details
+              </button>
               <Link
                 href="/dashboard/new"
                 className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
@@ -120,6 +153,122 @@ export default function DashboardPage() {
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {showApiDetails && (
+          <div className="bg-white rounded-lg shadow-lg p-6 mb-6 border-2 border-blue-200">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-gray-900">API Connection Details</h2>
+              <button
+                onClick={() => setShowApiDetails(false)}
+                className="text-gray-500 hover:text-gray-700 text-xl"
+              >
+                ×
+              </button>
+            </div>
+            <p className="text-gray-600 mb-6">
+              Use these details to connect your CMS with other websites. Copy the information you need below.
+            </p>
+
+            <div className="space-y-4">
+              {/* API Base URL */}
+              <div className="border rounded-lg p-4 bg-gray-50">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-semibold text-gray-700">Base URL:</label>
+                  <button
+                    onClick={() => copyToClipboard(apiBaseUrl, "baseUrl")}
+                    className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+                  >
+                    {copied === "baseUrl" ? "✓ Copied" : "Copy"}
+                  </button>
+                </div>
+                <code className="text-sm text-gray-800 break-all">{apiBaseUrl}</code>
+              </div>
+
+              {/* API Feed Endpoint */}
+              <div className="border rounded-lg p-4 bg-gray-50">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-semibold text-gray-700">API Feed Endpoint (Public):</label>
+                  <button
+                    onClick={() => copyToClipboard(apiFeedUrl, "feedUrl")}
+                    className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+                  >
+                    {copied === "feedUrl" ? "✓ Copied" : "Copy"}
+                  </button>
+                </div>
+                <code className="text-sm text-gray-800 break-all">{apiFeedUrl}</code>
+                <p className="text-xs text-gray-500 mt-2">
+                  This endpoint returns all published blog posts. No authentication required.
+                </p>
+              </div>
+
+              {/* Environment Variable Example */}
+              <div className="border rounded-lg p-4 bg-gray-50">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-semibold text-gray-700">Environment Variable:</label>
+                  <button
+                    onClick={() => copyToClipboard(envExample, "envVar")}
+                    className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+                  >
+                    {copied === "envVar" ? "✓ Copied" : "Copy"}
+                  </button>
+                </div>
+                <code className="text-sm text-gray-800 break-all">{envExample}</code>
+                <p className="text-xs text-gray-500 mt-2">
+                  Add this to your .env file in the website you want to connect.
+                </p>
+              </div>
+
+              {/* JavaScript Fetch Example */}
+              <div className="border rounded-lg p-4 bg-gray-50">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-semibold text-gray-700">JavaScript Fetch Example:</label>
+                  <button
+                    onClick={() => copyToClipboard(fetchExample, "fetchExample")}
+                    className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+                  >
+                    {copied === "fetchExample" ? "✓ Copied" : "Copy"}
+                  </button>
+                </div>
+                <pre className="text-xs text-gray-800 bg-white p-3 rounded border overflow-x-auto">
+                  <code>{fetchExample}</code>
+                </pre>
+              </div>
+
+              {/* API Response Format */}
+              <div className="border rounded-lg p-4 bg-blue-50">
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">Response Format:</h3>
+                <p className="text-xs text-gray-600 mb-2">
+                  The API returns an array of published blog posts with the following structure:
+                </p>
+                <pre className="text-xs text-gray-800 bg-white p-3 rounded border overflow-x-auto">
+                  <code>{`[
+  {
+    "id": "post-id",
+    "title": "Post Title",
+    "slug": "post-slug",
+    "excerpt": "Post excerpt...",
+    "content": "Full markdown content...",
+    "publishedDate": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "coverImage": { "url": "image-url" } // optional
+  }
+]`}</code>
+                </pre>
+              </div>
+
+              {/* Additional Info */}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-yellow-800 mb-2">📝 Notes:</h3>
+                <ul className="text-xs text-yellow-700 space-y-1 list-disc list-inside">
+                  <li>The API endpoint is public and doesn't require authentication</li>
+                  <li>Only published posts are returned</li>
+                  <li>Posts are sorted by published date (newest first)</li>
+                  <li>For production, update the URL to your deployed CMS domain</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Blog Posts</h2>
 
         {posts.length === 0 ? (
