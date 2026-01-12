@@ -132,38 +132,54 @@ export function deletePost(id: string): boolean {
 export function getUsers(): User[] {
   try {
     ensureDataFiles();
+    // Check if file exists and is readable
+    if (!fs.existsSync(USERS_FILE)) {
+      return [];
+    }
     const data = fs.readFileSync(USERS_FILE, "utf-8");
     const users = JSON.parse(data);
-    
-    // If no users exist, create default admin user (for first-time deployment)
-    if (users.length === 0) {
-      const defaultPasswordHash = "$2a$10$3hfy6d3Xi/7JCRzGbR.FiuPkUl6VbTGZzunHoPhqHRHg/2RPT9B32"; // hash of "admin123"
-      const defaultUser: User = {
-        id: "1",
-        email: "admin@galactis.ai",
-        password: defaultPasswordHash,
-        name: "Admin",
-      };
-      users.push(defaultUser);
-      try {
-        fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), "utf-8");
-      } catch (writeError) {
-        console.error("Error writing default user:", writeError);
-      }
-      return users;
-    }
-    
-    return users;
+    return Array.isArray(users) ? users : [];
   } catch (error) {
+    // On serverless, file might not exist or be readable - return empty array
+    // getUserByEmail will handle returning default admin
     console.error("Error reading users:", error);
     return [];
   }
 }
 
+// Default admin user (for serverless environments where file writes don't persist)
+const DEFAULT_ADMIN_USER: User = {
+  id: "1",
+  email: "admin@galactis.ai",
+  password: "$2a$10$3hfy6d3Xi/7JCRzGbR.FiuPkUl6VbTGZzunHoPhqHRHg/2RPT9B32", // hash of "admin123"
+  name: "Admin",
+};
+
 // Get user by email
 export function getUserByEmail(email: string): User | null {
-  const users = getUsers();
-  return users.find((u) => u.email === email) || null;
+  try {
+    const users = getUsers();
+    const user = users.find((u) => u.email === email);
+    
+    // If user found in file, return it
+    if (user) {
+      return user;
+    }
+    
+    // If no users in file and requesting default admin, return default admin (for serverless)
+    // This handles Vercel/serverless where file writes don't persist
+    if (users.length === 0 && email === "admin@galactis.ai") {
+      return DEFAULT_ADMIN_USER;
+    }
+    
+    return null;
+  } catch (error) {
+    // If file read fails (e.g., on serverless), return default admin for the default email
+    if (email === "admin@galactis.ai") {
+      return DEFAULT_ADMIN_USER;
+    }
+    return null;
+  }
 }
 
 // Create a new user
