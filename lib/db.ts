@@ -118,10 +118,12 @@ export function savePosts(posts: BlogPost[]): void {
 export async function getPostById(id: string): Promise<BlogPost | null> {
   // Use database if configured
   if (isDatabaseConfigured()) {
-    return await getPostByIdFromDB(id);
+    const post = await getPostByIdFromDB(id);
+    if (post) return post;
+    // Fall through to check in-memory if not found in DB
   }
 
-  // Fallback to file system
+  // Fallback to in-memory/file system
   const posts = await getPosts();
   return posts.find((p) => p.id === id) || null;
 }
