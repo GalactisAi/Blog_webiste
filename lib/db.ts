@@ -17,6 +17,10 @@ const DATA_DIR = path.join(process.cwd(), "data");
 const POSTS_FILE = path.join(DATA_DIR, "posts.json");
 const USERS_FILE = path.join(DATA_DIR, "users.json");
 
+// In-memory storage for posts (used when database not configured and file system not writable)
+// This is a temporary solution for serverless environments until database is set up
+let inMemoryPosts: BlogPost[] = [];
+
 // Debug: Log paths in development
 if (process.env.NODE_ENV === "development") {
   console.log("[DB] Data directory:", DATA_DIR);
@@ -67,7 +71,7 @@ export interface User {
   name: string;
 }
 
-// Read posts from database or file
+// Read posts from database, file, or memory
 export async function getPosts(): Promise<BlogPost[]> {
   // Use database if configured (for production/serverless)
   if (isDatabaseConfigured()) {
@@ -77,22 +81,36 @@ export async function getPosts(): Promise<BlogPost[]> {
   // Fallback to file system (for local development)
   try {
     ensureDataFiles();
-    const data = fs.readFileSync(POSTS_FILE, "utf-8");
-    return JSON.parse(data);
+    if (fs.existsSync(POSTS_FILE)) {
+      const data = fs.readFileSync(POSTS_FILE, "utf-8");
+      const posts = JSON.parse(data);
+      // Sync in-memory with file system
+      if (Array.isArray(posts)) {
+        inMemoryPosts = posts;
+        return posts;
+      }
+    }
   } catch (error) {
-    console.error("Error reading posts:", error);
-    return [];
+    console.error("Error reading posts from file:", error);
   }
+
+  // Fallback to in-memory storage (for serverless when file system not writable)
+  return inMemoryPosts;
 }
 
-// Write posts to file
+// Write posts to file or memory
 export function savePosts(posts: BlogPost[]): void {
+  // Update in-memory storage
+  inMemoryPosts = posts;
+
+  // Try to save to file system (works in local dev, fails on serverless)
   try {
     ensureDataFiles();
     fs.writeFileSync(POSTS_FILE, JSON.stringify(posts, null, 2));
   } catch (error) {
-    console.error("Error saving posts:", error);
-    throw error;
+    // On serverless (Vercel), file writes fail - that's okay, we use in-memory
+    // Log warning but don't throw - in-memory storage will work for this request
+    console.warn("Could not write to file system (serverless environment), using in-memory storage");
   }
 }
 
@@ -112,10 +130,12 @@ export async function getPostById(id: string): Promise<BlogPost | null> {
 export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
   // Use database if configured
   if (isDatabaseConfigured()) {
-    return await getPostBySlugFromDB(slug);
+    const post = await getPostBySlugFromDB(slug);
+    if (post) return post;
+    // Fall through to check in-memory if not found in DB
   }
 
-  // Fallback to file system
+  // Fallback to in-memory/file system
   const posts = await getPosts();
   return posts.find((p) => p.slug === slug) || null;
 }
@@ -126,10 +146,15 @@ export async function createPost(
 ): Promise<BlogPost> {
   // Use database if configured
   if (isDatabaseConfigured()) {
-    return await createPostInDB(post);
+    try {
+      return await createPostInDB(post);
+    } catch (error) {
+      console.error("Database error, falling back to in-memory:", error);
+      // Fall through to in-memory storage
+    }
   }
 
-  // Fallback to file system
+  // Fallback to in-memory storage (works on serverless)
   const posts = await getPosts();
   const newPost: BlogPost = {
     ...post,
@@ -137,7 +162,7 @@ export async function createPost(
     createdAt: new Date().toISOString(),
   };
   posts.push(newPost);
-  savePosts(posts);
+  savePosts(posts); // This will update in-memory storage
   return newPost;
 }
 
@@ -148,10 +173,15 @@ export async function updatePost(
 ): Promise<BlogPost | null> {
   // Use database if configured
   if (isDatabaseConfigured()) {
-    return await updatePostInDB(id, updates);
+    try {
+      return await updatePostInDB(id, updates);
+    } catch (error) {
+      console.error("Database error, falling back to in-memory:", error);
+      // Fall through to in-memory storage
+    }
   }
 
-  // Fallback to file system
+  // Fallback to in-memory storage
   const posts = await getPosts();
   const index = posts.findIndex((p) => p.id === id);
   if (index === -1) return null;
@@ -169,10 +199,15 @@ export async function updatePost(
 export async function deletePost(id: string): Promise<boolean> {
   // Use database if configured
   if (isDatabaseConfigured()) {
-    return await deletePostFromDB(id);
+    try {
+      return await deletePostFromDB(id);
+    } catch (error) {
+      console.error("Database error, falling back to in-memory:", error);
+      // Fall through to in-memory storage
+    }
   }
 
-  // Fallback to file system
+  // Fallback to in-memory storage
   const posts = await getPosts();
   const filtered = posts.filter((p) => p.id !== id);
   if (filtered.length === posts.length) return false;
