@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import PostPreview from "@/components/PostPreview";
 
 interface BlogPost {
   id: string;
@@ -20,6 +21,7 @@ export default function DashboardPage() {
   const [authenticated, setAuthenticated] = useState(false);
   const [showApiDetails, setShowApiDetails] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  const [previewPostId, setPreviewPostId] = useState<string | null>(null);
 
   useEffect(() => {
     checkAuth();
@@ -308,6 +310,13 @@ export default function DashboardPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => setPreviewPostId(post.id)}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
+                      title="Preview how this post will look when published"
+                    >
+                      View
+                    </button>
                     <Link
                       href={`/dashboard/edit/${post.id}`}
                       className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm font-medium"
@@ -326,6 +335,13 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
+        )}
+
+        {previewPostId && (
+          <PostPreview
+            postId={previewPostId}
+            onClose={() => setPreviewPostId(null)}
+          />
         )}
       </main>
     </div>
