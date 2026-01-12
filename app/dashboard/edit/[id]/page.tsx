@@ -90,7 +90,6 @@ export default function EditPostPage() {
 
       // If scheduling, force published to false (will auto-publish at scheduled time)
       const shouldPublish = formData.schedulePublish ? false : formData.published;
-      const shouldPublish = formData.schedulePublish ? false : formData.published;
 
       const response = await fetch(`/api/posts/${id}`, {
         method: "PUT",
