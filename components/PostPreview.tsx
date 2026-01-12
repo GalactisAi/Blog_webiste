@@ -189,7 +189,8 @@ export default function PostPreview({ postId, onClose }: PostPreviewProps) {
 
           {/* Content */}
           <div
-            className="prose prose-lg max-w-none"
+            className="prose prose-lg max-w-none text-gray-800"
+            style={{ wordBreak: 'break-word' }}
             dangerouslySetInnerHTML={{ __html: markdownToHtml(post.content) }}
           />
         </div>
