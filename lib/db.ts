@@ -246,39 +246,48 @@ const DEFAULT_ADMIN_USER: User = {
 
 // Get user by email
 export async function getUserByEmail(email: string): Promise<User | null> {
-  // Use database if configured
-  if (isDatabaseConfigured()) {
-    const user = await getUserByEmailFromDB(email);
-    if (user) return user;
-    // If not found in DB and requesting default admin, return default (for first-time setup)
-    if (email === "admin@galactis.ai") {
-      return DEFAULT_ADMIN_USER;
+  // Always check for default admin first (for serverless when DB not set up or empty)
+  if (email === "admin@galactis.ai") {
+    // Try database first if configured
+    if (isDatabaseConfigured()) {
+      try {
+        const user = await getUserByEmailFromDB(email);
+        if (user) return user;
+      } catch (error) {
+        console.error("Error checking database for user:", error);
+        // Fall through to default admin
+      }
     }
-    return null;
+    
+    // Try file system
+    try {
+      const users = getUsers();
+      const user = users.find((u) => u.email === email);
+      if (user) return user;
+    } catch (error) {
+      // File system failed, continue to default
+    }
+    
+    // Return default admin user (works on serverless)
+    return DEFAULT_ADMIN_USER;
+  }
+
+  // For other emails, check database first, then file system
+  if (isDatabaseConfigured()) {
+    try {
+      const user = await getUserByEmailFromDB(email);
+      if (user) return user;
+    } catch (error) {
+      console.error("Error checking database for user:", error);
+    }
   }
 
   // Fallback to file system
   try {
     const users = getUsers();
-    const user = users.find((u) => u.email === email);
-    
-    // If user found in file, return it
-    if (user) {
-      return user;
-    }
-    
-    // If no users in file and requesting default admin, return default admin (for serverless)
-    // This handles Vercel/serverless where file writes don't persist
-    if (users.length === 0 && email === "admin@galactis.ai") {
-      return DEFAULT_ADMIN_USER;
-    }
-    
-    return null;
+    return users.find((u) => u.email === email) || null;
   } catch (error) {
-    // If file read fails (e.g., on serverless), return default admin for the default email
-    if (email === "admin@galactis.ai") {
-      return DEFAULT_ADMIN_USER;
-    }
+    console.error("Error reading users from file:", error);
     return null;
   }
 }
