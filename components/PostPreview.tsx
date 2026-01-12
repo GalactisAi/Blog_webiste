@@ -44,25 +44,35 @@ export default function PostPreview({ postId, onClose }: PostPreviewProps) {
   const markdownToHtml = (markdown: string): string => {
     let html = markdown;
     
-    // Images first (before other processing to avoid conflicts)
-    // Handle markdown image syntax: ![alt](url)
+    // First, handle markdown image syntax: ![alt](url) - including base64 data URLs
+    // This regex handles both regular URLs and base64 data URLs
     html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, url) => {
-      // Clean up the URL (remove any extra spaces or characters)
       const cleanUrl = url.trim();
-      return `<div class="my-6"><img src="${cleanUrl}" alt="${alt || 'Image'}" class="max-w-full h-auto rounded-lg shadow-md mx-auto" style="max-height: 500px; object-fit: contain;" /></div>`;
+      // Check if it's a base64 data URL (very long)
+      if (cleanUrl.startsWith('data:image/')) {
+        return `<div class="my-6 text-center"><img src="${cleanUrl}" alt="${alt || 'Image'}" class="max-w-full h-auto rounded-lg shadow-md mx-auto" style="max-height: 500px; object-fit: contain; display: block;" onerror="this.style.display='none';" /></div>`;
+      }
+      // Regular image URL
+      return `<div class="my-6 text-center"><img src="${cleanUrl}" alt="${alt || 'Image'}" class="max-w-full h-auto rounded-lg shadow-md mx-auto" style="max-height: 500px; object-fit: contain; display: block;" onerror="this.style.display='none';" /></div>`;
     });
     
-    // Also handle plain image URLs (data URLs or http/https URLs that might be in content)
-    // This handles cases where images are pasted directly
-    html = html.replace(/(^|\s)(data:image\/[^;]+;base64,[^\s\)]+)/g, (match, prefix, dataUrl) => {
-      return `${prefix}<div class="my-6"><img src="${dataUrl.trim()}" alt="Uploaded image" class="max-w-full h-auto rounded-lg shadow-md mx-auto" style="max-height: 500px; object-fit: contain;" /></div>`;
+    // Handle standalone base64 data URLs that might not be in markdown format
+    // Match data:image/...base64,... (can be very long, so we match until we find whitespace or end)
+    html = html.replace(/(data:image\/[a-zA-Z]+;base64,[A-Za-z0-9+/=\s]+)/g, (match, dataUrl) => {
+      // Only process if not already inside an img tag
+      if (!html.includes(`src="${dataUrl}`) && !html.includes(`src='${dataUrl}`)) {
+        // Clean up any whitespace in the base64 string
+        const cleanDataUrl = dataUrl.replace(/\s+/g, '');
+        return `<div class="my-6 text-center"><img src="${cleanDataUrl}" alt="Uploaded image" class="max-w-full h-auto rounded-lg shadow-md mx-auto" style="max-height: 500px; object-fit: contain; display: block;" onerror="this.style.display='none';" /></div>`;
+      }
+      return match;
     });
     
-    // Handle http/https image URLs that are standalone
+    // Handle standalone http/https image URLs (not in markdown format)
     html = html.replace(/(^|\s)(https?:\/\/[^\s\)]+\.(jpg|jpeg|png|gif|webp|svg)(\?[^\s\)]*)?)/gi, (match, prefix, url) => {
       // Only replace if it's not already inside an img tag or markdown
-      if (!match.includes('![') && !match.includes('<img')) {
-        return `${prefix}<div class="my-6"><img src="${url.trim()}" alt="Image" class="max-w-full h-auto rounded-lg shadow-md mx-auto" style="max-height: 500px; object-fit: contain;" /></div>`;
+      if (!match.includes('![') && !match.includes('<img') && !html.includes(`src="${url}`)) {
+        return `${prefix}<div class="my-6 text-center"><img src="${url.trim()}" alt="Image" class="max-w-full h-auto rounded-lg shadow-md mx-auto" style="max-height: 500px; object-fit: contain; display: block;" onerror="this.style.display='none';" /></div>`;
       }
       return match;
     });
@@ -81,7 +91,7 @@ export default function PostPreview({ postId, onClose }: PostPreviewProps) {
     // Links (but not image links which are already processed)
     html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, text, url) => {
       // Skip if this looks like it was part of an image (already processed)
-      if (html.includes(`<img src="${url}"`)) {
+      if (html.includes(`<img src="${url}"`) || url.startsWith('data:image/')) {
         return match;
       }
       return `<a href="${url}" class="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">${text}</a>`;
