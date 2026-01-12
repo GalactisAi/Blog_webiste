@@ -10,6 +10,7 @@
     "setup": "node scripts/setup.js"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.90.1",
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
     "marked": "^12.0.2",

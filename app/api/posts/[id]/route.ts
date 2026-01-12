@@ -9,7 +9,7 @@ export async function GET(
 ) {
   const { id } = await params;
   const user = getAuthUser(request);
-  const post = getPostById(id);
+  const post = await getPostById(id);
 
   if (!post) {
     return NextResponse.json({ error: "Post not found" }, { status: 404 });
@@ -38,7 +38,7 @@ export async function PUT(
     const data = await request.json();
     const { title, slug, excerpt, content, publishedDate, published } = data;
 
-    const updated = updatePost(id, {
+    const updated = await updatePost(id, {
       title,
       slug,
       excerpt,
@@ -69,7 +69,7 @@ export async function DELETE(
   }
 
   const { id } = await params;
-  const success = deletePost(id);
+  const success = await deletePost(id);
 
   if (!success) {
     return NextResponse.json({ error: "Post not found" }, { status: 404 });

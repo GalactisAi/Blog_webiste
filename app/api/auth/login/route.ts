@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
     }
 
-    const user = getUserByEmail(email);
+    const user = await getUserByEmail(email);
     if (!user) {
       console.error("Login failed: User not found for email:", email);
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });

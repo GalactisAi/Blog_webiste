@@ -5,7 +5,7 @@ import { getPosts } from "@/lib/db";
 // This is the endpoint the main website will consume
 export async function GET() {
   try {
-    const posts = getPosts();
+    const posts = await getPosts();
     
     // Debug logging
     console.log(`[API Feed] Total posts: ${posts.length}`);

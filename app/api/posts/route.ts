@@ -6,7 +6,7 @@ import { getPosts, createPost, BlogPost } from "@/lib/db";
 export async function GET(request: NextRequest) {
   try {
     const user = getAuthUser(request);
-    const posts = getPosts();
+    const posts = await getPosts();
 
     // If authenticated, return all posts
     if (user) {
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const post = createPost({
+    const post = await createPost({
       title,
       slug,
       excerpt,

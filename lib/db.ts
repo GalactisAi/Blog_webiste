@@ -1,5 +1,16 @@
 import fs from "fs";
 import path from "path";
+import { isDatabaseConfigured } from "./supabase";
+import {
+  getPostsFromDB,
+  getPostByIdFromDB,
+  getPostBySlugFromDB,
+  createPostInDB,
+  updatePostInDB,
+  deletePostFromDB,
+  getUserByEmailFromDB,
+  createUserInDB,
+} from "./db-supabase";
 
 // Use absolute path to ensure we're in the right directory
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -56,8 +67,14 @@ export interface User {
   name: string;
 }
 
-// Read posts from file
-export function getPosts(): BlogPost[] {
+// Read posts from database or file
+export async function getPosts(): Promise<BlogPost[]> {
+  // Use database if configured (for production/serverless)
+  if (isDatabaseConfigured()) {
+    return await getPostsFromDB();
+  }
+
+  // Fallback to file system (for local development)
   try {
     ensureDataFiles();
     const data = fs.readFileSync(POSTS_FILE, "utf-8");
@@ -80,20 +97,40 @@ export function savePosts(posts: BlogPost[]): void {
 }
 
 // Get a single post by ID
-export function getPostById(id: string): BlogPost | null {
-  const posts = getPosts();
+export async function getPostById(id: string): Promise<BlogPost | null> {
+  // Use database if configured
+  if (isDatabaseConfigured()) {
+    return await getPostByIdFromDB(id);
+  }
+
+  // Fallback to file system
+  const posts = await getPosts();
   return posts.find((p) => p.id === id) || null;
 }
 
 // Get a single post by slug
-export function getPostBySlug(slug: string): BlogPost | null {
-  const posts = getPosts();
+export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
+  // Use database if configured
+  if (isDatabaseConfigured()) {
+    return await getPostBySlugFromDB(slug);
+  }
+
+  // Fallback to file system
+  const posts = await getPosts();
   return posts.find((p) => p.slug === slug) || null;
 }
 
 // Create a new post
-export function createPost(post: Omit<BlogPost, "id" | "createdAt">): BlogPost {
-  const posts = getPosts();
+export async function createPost(
+  post: Omit<BlogPost, "id" | "createdAt">
+): Promise<BlogPost> {
+  // Use database if configured
+  if (isDatabaseConfigured()) {
+    return await createPostInDB(post);
+  }
+
+  // Fallback to file system
+  const posts = await getPosts();
   const newPost: BlogPost = {
     ...post,
     id: Date.now().toString(),
@@ -105,8 +142,17 @@ export function createPost(post: Omit<BlogPost, "id" | "createdAt">): BlogPost {
 }
 
 // Update a post
-export function updatePost(id: string, updates: Partial<BlogPost>): BlogPost | null {
-  const posts = getPosts();
+export async function updatePost(
+  id: string,
+  updates: Partial<BlogPost>
+): Promise<BlogPost | null> {
+  // Use database if configured
+  if (isDatabaseConfigured()) {
+    return await updatePostInDB(id, updates);
+  }
+
+  // Fallback to file system
+  const posts = await getPosts();
   const index = posts.findIndex((p) => p.id === id);
   if (index === -1) return null;
 
@@ -120,8 +166,14 @@ export function updatePost(id: string, updates: Partial<BlogPost>): BlogPost | n
 }
 
 // Delete a post
-export function deletePost(id: string): boolean {
-  const posts = getPosts();
+export async function deletePost(id: string): Promise<boolean> {
+  // Use database if configured
+  if (isDatabaseConfigured()) {
+    return await deletePostFromDB(id);
+  }
+
+  // Fallback to file system
+  const posts = await getPosts();
   const filtered = posts.filter((p) => p.id !== id);
   if (filtered.length === posts.length) return false;
   savePosts(filtered);
@@ -156,7 +208,19 @@ const DEFAULT_ADMIN_USER: User = {
 };
 
 // Get user by email
-export function getUserByEmail(email: string): User | null {
+export async function getUserByEmail(email: string): Promise<User | null> {
+  // Use database if configured
+  if (isDatabaseConfigured()) {
+    const user = await getUserByEmailFromDB(email);
+    if (user) return user;
+    // If not found in DB and requesting default admin, return default (for first-time setup)
+    if (email === "admin@galactis.ai") {
+      return DEFAULT_ADMIN_USER;
+    }
+    return null;
+  }
+
+  // Fallback to file system
   try {
     const users = getUsers();
     const user = users.find((u) => u.email === email);
@@ -183,7 +247,13 @@ export function getUserByEmail(email: string): User | null {
 }
 
 // Create a new user
-export function createUser(user: Omit<User, "id">): User {
+export async function createUser(user: Omit<User, "id">): Promise<User> {
+  // Use database if configured
+  if (isDatabaseConfigured()) {
+    return await createUserInDB(user);
+  }
+
+  // Fallback to file system
   const users = getUsers();
   const newUser: User = {
     ...user,
