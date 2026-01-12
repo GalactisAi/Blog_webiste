@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { getPosts } from "@/lib/db";
+import { checkAndPublishScheduledPosts } from "@/lib/scheduler";
 
 // Public API endpoint to fetch published blog posts
 // This is the endpoint the main website will consume
 export async function GET() {
   try {
+    // Check and auto-publish scheduled posts
+    await checkAndPublishScheduledPosts();
+    
     const posts = await getPosts();
     
     // Debug logging

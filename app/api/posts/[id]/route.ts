@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth";
 import { getPostById, updatePost, deletePost } from "@/lib/db";
+import { checkAndPublishScheduledPosts } from "@/lib/scheduler";
 
 // GET - Get a single post
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Check and auto-publish scheduled posts
+  await checkAndPublishScheduledPosts();
+  
   const { id } = await params;
   const user = getAuthUser(request);
   const post = await getPostById(id);

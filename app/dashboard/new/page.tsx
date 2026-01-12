@@ -14,8 +14,10 @@ export default function NewPostPage() {
     excerpt: "",
     content: "",
     publishedDate: new Date().toISOString().split("T")[0],
+    publishedTime: "00:00",
     published: false,
     coverImage: "",
+    schedulePublish: false,
   });
 
   useEffect(() => {
@@ -56,11 +58,22 @@ export default function NewPostPage() {
     setLoading(true);
 
     try {
+      // Combine date and time for scheduled publishing
+      let finalPublishedDate = formData.publishedDate;
+      if (formData.schedulePublish && formData.publishedTime) {
+        const [hours, minutes] = formData.publishedTime.split(":");
+        const dateTime = new Date(`${formData.publishedDate}T${hours}:${minutes}:00`);
+        finalPublishedDate = dateTime.toISOString();
+      } else {
+        finalPublishedDate = new Date(formData.publishedDate).toISOString();
+      }
+
       const response = await fetch("/api/posts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
+          publishedDate: finalPublishedDate,
           coverImage: formData.coverImage || undefined,
         }),
       });
@@ -191,18 +204,52 @@ export default function NewPostPage() {
             />
           </div>
 
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="published"
-              className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
-              checked={formData.published}
-              onChange={(e) => setFormData({ ...formData, published: e.target.checked })}
-            />
-            <label htmlFor="published" className="ml-2 block text-sm text-gray-900">
-              Publish immediately
-            </label>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="schedulePublish"
+                className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                checked={formData.schedulePublish}
+                onChange={(e) => setFormData({ ...formData, schedulePublish: e.target.checked, published: !e.target.checked })}
+              />
+              <label htmlFor="schedulePublish" className="ml-2 block text-sm text-gray-900">
+                Schedule Publishing
+              </label>
+            </div>
+            {formData.schedulePublish && (
+              <div className="flex-1">
+                <label htmlFor="publishedTime" className="block text-sm font-medium text-gray-700">
+                  Publish Time
+                </label>
+                <input
+                  type="time"
+                  id="publishedTime"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                  value={formData.publishedTime}
+                  onChange={(e) => setFormData({ ...formData, publishedTime: e.target.value })}
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Post will be automatically published at this date and time
+                </p>
+              </div>
+            )}
           </div>
+
+          {!formData.schedulePublish && (
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="published"
+                className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                checked={formData.published}
+                onChange={(e) => setFormData({ ...formData, published: e.target.checked })}
+              />
+              <label htmlFor="published" className="ml-2 block text-sm text-gray-900">
+                Publish immediately
+              </label>
+            </div>
+          )}
 
           <div className="flex justify-end gap-4">
             <button

@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth";
 import { getPosts, createPost, BlogPost } from "@/lib/db";
+import { checkAndPublishScheduledPosts } from "@/lib/scheduler";
 
 // GET - List all posts (for dashboard) or published posts (for public API)
 export async function GET(request: NextRequest) {
   try {
+    // Check and auto-publish scheduled posts
+    await checkAndPublishScheduledPosts();
+    
     const user = getAuthUser(request);
     const posts = await getPosts();
 
