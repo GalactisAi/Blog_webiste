@@ -57,12 +57,13 @@ export default function PostPreview({ postId, onClose }: PostPreviewProps) {
     });
     
     // Handle standalone base64 data URLs that might not be in markdown format
-    // Match data:image/...base64,... (can be very long, so we match until we find whitespace or end)
-    html = html.replace(/(data:image\/[a-zA-Z]+;base64,[A-Za-z0-9+/=\s]+)/g, (match, dataUrl) => {
+    // Match data:image/...base64,... (can be very long, so we match until we find closing paren or newline)
+    // This handles base64 strings that might be very long
+    html = html.replace(/(data:image\/[a-zA-Z]+;base64,[A-Za-z0-9+/=]+)/g, (match, dataUrl) => {
       // Only process if not already inside an img tag
-      if (!html.includes(`src="${dataUrl}`) && !html.includes(`src='${dataUrl}`)) {
-        // Clean up any whitespace in the base64 string
-        const cleanDataUrl = dataUrl.replace(/\s+/g, '');
+      if (!html.includes(`src="${dataUrl}`) && !html.includes(`src='${dataUrl}`) && !html.includes(`<img`)) {
+        // Clean up any whitespace/newlines in the base64 string
+        const cleanDataUrl = dataUrl.replace(/\s+/g, '').replace(/\n/g, '');
         return `<div class="my-6 text-center"><img src="${cleanDataUrl}" alt="Uploaded image" class="max-w-full h-auto rounded-lg shadow-md mx-auto" style="max-height: 500px; object-fit: contain; display: block;" onerror="this.style.display='none';" /></div>`;
       }
       return match;
